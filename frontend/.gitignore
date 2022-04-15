@@ -1,0 +1,6 @@
+.parcel-cache
+dist
+docs
+node_modules
+yarn.lock
+*.log
