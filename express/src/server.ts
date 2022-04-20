@@ -29,6 +29,76 @@ let BUNDLR_ENDPOINT = 'devnet';
  *                                  Middlewares
  **********************************************************************************/
 
+//these need to be sequentiallly appended because solstory
+const DRACULA = [
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Richter:",
+                description: "Die monster. You don’t belong in this world!",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/richter.jpg"
+            },
+            data: {
+            }
+        },
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Dracula:",
+                description: "It was not by my hand I was once again given flesh. I was brought here by humans who wished to pay me tribute!",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/dracula.jpg"
+            },
+            data: {
+            }
+        },
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Richter:",
+                description: "Tribute!? You steal men’s souls, and make them your slaves!",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/richter.jpg"
+            },
+            data: {
+            }
+        },
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Dracula:",
+                description: "Perhaps the same could be said of all religions… ",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/dracula.jpg"
+            },
+            data: {
+            }
+        },
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Richter:",
+                description: "Your words are as empty as your soul! Mankind ill needs a savior such as you!",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/richter.jpg"
+            },
+            data: {
+            }
+        },
+        {
+            type: SolstoryItemType.Item,
+            display:{
+                label: "Dracula:",
+                description: "What is a man? A miserable little pile of secrets. But enough talk… Have at you!",
+                helpText: "Castlevania: Symphony of the Night",
+                img: "http://soldracula.is/static/dracula.jpg"
+            },
+            data: {
+            }
+        },
+]
+
 
 // Common middlewares
 app.use(express.json());
@@ -38,9 +108,10 @@ app.use(cookieParser());
 // Show routes called in console during development
 if (process.env.NODE_ENV === 'development') {
     app.use(morgan('dev'));
-    // ENDPOINT = 'http://localhost:8899'
-    ENDPOINT = 'https://api.devnet.solana.com';
+    ENDPOINT = 'http://localhost:8899'
+    // ENDPOINT = 'https://api.devnet.solana.com';
     BUNDLR_ENDPOINT = 'devnet';
+    console.log("using dev");
 
 }
 //
@@ -70,13 +141,6 @@ solstoryApi.configureBundlrServer(Buffer.from(JSON.parse(raw)), BUNDLR_ENDPOINT)
 //@ts-ignore haha
 console.log("pk", solstoryApi._programId.toBase58())
 
-const jsonRaw = fs.readFileSync(path.resolve(__dirname + '/../haikus.json'))
-type HaikuType = {
-    line1: string,
-    line2: string,
-    line3: string
-}
-const haikus = JSON.parse(jsonRaw.toString()) as HaikuType[];
 
 /***********************************************************************************
  *                         API routes and error handling
@@ -108,9 +172,9 @@ router.get('/init',  async (req: Request, res: Response, next:NextFunction):Prom
     return solstoryApi.server.writer.createWriterMetadata({
         writerKey: wallet.payer.publicKey,
         cdn: "",
-        label: "Haiku!",
-        description: "AI generated haikus for your NFTs",
-        url: "http://solhaiku.is",
+        label: "Dracula!",
+        description: "Best meme of all time.",
+        url: "http://soldracula.is",
         metadata: JSON.stringify({}),
         hasExtendedMetadata:false,
         systemValidated: false,
@@ -125,13 +189,13 @@ router.get('/init',  async (req: Request, res: Response, next:NextFunction):Prom
 /*
  * getMin
  * getOwner
- * findProgramAddress("haikupls", owner_id)
+ * findProgramAddress("dracula", owner_id)
  * verify it exists
  * check if head exists create
  * createHeadIfNotExist
  * bundlr upload
  */
-router.get('/haiku/:txid', (req: Request, res: Response, next:NextFunction) => {
+router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) => {
     const { txid } = req.params;
 
     // quick bit of ddos prevention - we don't want to infinitely append because
@@ -186,23 +250,12 @@ router.get('/haiku/:txid', (req: Request, res: Response, next:NextFunction) => {
         if(ownerActual != ownerShould)
             throw Error("Invalid transaction");
 
-        const haiku = (haikus as []).pop() as unknown as HaikuType
-        const haikuText = haiku.line1 + "\n" + haiku.line2 + "\n" + haiku.line3;
-
-        //Juicy solstory bits!
-        const item:SolstoryItemInner = {
-            type: SolstoryItemType.Item,
-            display:{
-                label: "Haiku!",
-                description: haikuText,
-                helpText: "This haiku was generated by a GPT-2 neural net.",
-                img: "https://solstory.is/static/logo.jpg"
-            },
-            data: {
-                haiku:haiku,
-            }
+        let out;
+        for(let i = 0; i <DRACULA.length; i++) {
+           const item =  DRACULA[i];
+           out = await solstoryApi.server.writer.appendItemCreate(new PublicKey(nftId), item, {confirmation:{commitment:'finalized'}});
         }
-        const out = await solstoryApi.server.writer.appendItem(new PublicKey(nftId), item);
+
 
 
 
@@ -217,7 +270,7 @@ router.get('/haiku/:txid', (req: Request, res: Response, next:NextFunction) => {
 
 
         transCache.set(txid, true);
-        res.status(OK).json(tx);
+        res.status(OK).json(out);
     }).catch(next);
 });
 
