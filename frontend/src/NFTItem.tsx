@@ -8,13 +8,14 @@ import {utils} from '@metaplex/js';
 import { PublicKey, SystemProgram, Connection, Transaction, TransactionInstruction } from "@solana/web3.js";
 import axios from 'axios';
 
-const HAIKU_ADDRESS = "HAikuupsQpJViwtxtz2sGrgQ2hw18RYZ2pYQjLkNDcPw"
+const DRACULA_ADDRESS = "DrACcULrpRpsAZ5hyRmVwtLgWU37KRH6izEdeRhwDyg8"
 const MEMO_PROGRAM = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 import { useWallet, useAnchorWallet, useConnection } from '@solana/wallet-adapter-react';
 
 import React, { useState, useEffect } from 'react';
 
-const SERVER_URL = "https://solhaiku.is:8081"
+// const SERVER_URL = "https://soldracula.is:8081";
+const SERVER_URL = "http://localhost:3000";
 /*
  * This one sets up NFT display, which includes the popup
  * NFTPopup displaying all the attached programs.
@@ -44,17 +45,17 @@ export function NFTItem(props: {nft: any}) {
     });
   }, [props.nft]);
 
-  const requestHaiku = async (event:any) => {
+  const requestDracula = async (event:any) => {
       console.log(event);
 
       if(publicKey == undefined) {
-          throw "cannot request haiku after disconnecting wallet"
+          throw "cannot request dracula after disconnecting wallet"
       }
 
       const transaction = new Transaction().add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
-            toPubkey: new PublicKey(HAIKU_ADDRESS),
+            toPubkey: new PublicKey(DRACULA_ADDRESS),
             lamports: 1,
           })
         );
@@ -80,7 +81,7 @@ export function NFTItem(props: {nft: any}) {
         }
 
 
-        axios.get(SERVER_URL+'/haiku/'+localSignature).then((resp)=>{
+        axios.get(SERVER_URL+'/dracula/'+localSignature).then((resp)=>{
           console.log('res', resp);
           setDisplayState('success');
         }).catch((err)=> {
@@ -91,7 +92,7 @@ export function NFTItem(props: {nft: any}) {
 
   const sendSignature = (e:any) => {
       e.stopPropagation()
-      axios.get(SERVER_URL+'/haiku/'+signature).then((resp)=>{
+      axios.get(SERVER_URL+'/dracula/'+signature).then((resp)=>{
         console.log('res', resp);
         setDisplayState('success');
       }).catch((err)=> {
@@ -106,7 +107,7 @@ export function NFTItem(props: {nft: any}) {
         case 'init':
             return (<Typography>init</Typography>);
         case 'confirmation':
-            return (<Button onClick={requestHaiku}>send haiku</Button>);
+            return (<Button onClick={requestDracula}>send dracula</Button>);
         case 'sending':
             return (<Typography>sending</Typography>);
         case 'sent':
