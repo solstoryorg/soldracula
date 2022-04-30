@@ -77,8 +77,13 @@ const Context: FC<{ children: ReactNode }> = ({ children }) => {
 const Content: FC = () => {
     return (<Container sx={{display: "flex", flexDirection: "column", justifyContent: 'flex-center'}}>
             <Box sx={{display: "flex", alignContent: "center", justifyContent:"center"}}><WalletMultiButton sx={{ margin: 5, justify: 'center', flexGrow: 0}}/></Box>
+            <Box sx={{display: "flex", alignContent: "center", justifyContent:"center", marginBottom:1}}>
+            <Typography>Select an NFT, and send some dracula!</Typography>
+            </Box>
+
             <Box sx={{display: "flex", alignContent: "center", justifyContent:"center", marginBottom:5}}>
-            <Typography>Select an NFT, and send some dracula!</Typography></Box>
+            <Typography>Note that this involves 6 or so sequential blockchain transactions (for appending 6 records) which means the server confirmation
+                stage can take a while. You're free to close the app after sending if you wish–assuming the original transaction doesn't fail the server confirmation will succeed.</Typography></Box>
             <NFTList />
             </Container>
     );

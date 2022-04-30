@@ -21,15 +21,13 @@ import { TextEncoder } from 'util';
 // Constants
 const app = express();
 const ANCHOR_WALLET = process.env.ANCHOR_WALLET as string
-let ENDPOINT = 'https://api.devnet.solana.com';
+// let ENDPOINT = 'https://api.devnet.solana.com';
+let ENDPOINT = 'http://localhost:8899';
 let BUNDLR_ENDPOINT = 'devnet';
 
 
-/***********************************************************************************
- *                                  Middlewares
- **********************************************************************************/
 
-//these need to be sequentiallly appended because solstory
+//these need to be sequentiallly appended to our story
 const DRACULA = [
         {
             type: SolstoryItemType.Item,
@@ -99,6 +97,9 @@ const DRACULA = [
         },
 ]
 
+/***********************************************************************************
+ *                                  Middlewares
+ **********************************************************************************/
 
 // Common middlewares
 app.use(express.json());
@@ -130,16 +131,14 @@ const connection = new Connection(ENDPOINT);
  **********************************************************************************/
 
 
-console.log(ANCHOR_WALLET);
+console.log("Using wallet at: ", ANCHOR_WALLET);
 
 //we initialize this the same we would an anchor api
 const raw = fs.readFileSync(path.resolve(ANCHOR_WALLET), 'utf8');
 const wallet = new Wallet(Keypair.fromSecretKey(Buffer.from(JSON.parse(raw))));
 const provider = new Provider(connection, wallet, { commitment: 'confirmed' });
 const solstoryApi = new SolstoryAPI({}, provider);
-solstoryApi.configureBundlrServer(Buffer.from(JSON.parse(raw)), BUNDLR_ENDPOINT);
-//@ts-ignore haha
-console.log("pk", solstoryApi._programId.toBase58())
+solstoryApi.configureBundlrServer(Buffer.from(JSON.parse(raw)), BUNDLR_ENDPOINT, 20);
 
 
 /***********************************************************************************
@@ -150,6 +149,11 @@ const router = Router()
 const { CREATED, OK } = StatusCodes;
 const transCache = new NodeCache({stdTTL: 60*60})
 
+/*
+ * This function is just an easy way for us to handle one time setup for solstory. It would
+ * be totally reasonable to do this as a yarn script. Actually it would make a lot
+ * more sense as a yarn script. But I was feeling lazy the morning I wrote this.
+ */
 router.get('/init',  async (req: Request, res: Response, next:NextFunction):Promise<string> => {
     const [solstoryPda, _nonce2] = await PublicKey.findProgramAddress(
       [Buffer.from((new TextEncoder()).encode("solstory_pda"))],
@@ -186,15 +190,6 @@ router.get('/init',  async (req: Request, res: Response, next:NextFunction):Prom
 
 });
 
-/*
- * getMin
- * getOwner
- * findProgramAddress("dracula", owner_id)
- * verify it exists
- * check if head exists create
- * createHeadIfNotExist
- * bundlr upload
- */
 router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) => {
     const { txid } = req.params;
 
@@ -205,23 +200,18 @@ router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) =>
         throw Error("Transaction already processed.");
     }
 
-    connection.getParsedTransaction((txid )).then(async (tx) => {
+    // we are waiting for the transaction to be confirmed so we can retrieve it.
+    connection.confirmTransaction(txid).then((res) => {
+        console.log("confirmed transaction: ", res)
+        // get the transaction
+        return connection.getParsedTransaction((txid ))
+    }).then(async (tx) => {
+        // check for a failure case
         if(tx==null)
             throw Error("Transaction not found")
 
-
-
-
-        const timestamp = tx.blockTime
-        if (!timestamp)
-            throw Error("Transaction timestamp missing");
-
-        // 1000 here because date works in ms
-        // if((Date.now() - timestamp*1000) > (60*60 * 1000)) {
-        //     throw Error("Transaction too far past");
-        // }
-
-        //Verify that the given transaction has the correct shape.
+        // Verify that the given transaction has the correct shape.
+        // Basically we don't want someone using a txid that wasn't made by our frontend.
         const transferIx = tx.transaction.message.instructions[0] as ParsedInstruction;
         if (transferIx.program != 'system' ||
             transferIx.parsed.info.destination != wallet.payer.publicKey.toBase58() ||
@@ -230,13 +220,13 @@ router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) =>
             throw Error("Invalid transaction")
         }
 
-
+        // More of the same, verifying transaction shape.
         const memoIx = tx.transaction.message.instructions[1] as ParsedInstruction;
         if(memoIx.program != 'spl-memo' ||
           memoIx.parsed.length > 44 || memoIx.parsed.length < 32)
             throw Error("Invalid transaction");
 
-        // Drag out the owner (ty Solana Cookbook)
+        // Pull out out the owner (ty Solana Cookbook)
         const nftId:string = memoIx.parsed;
         const bigActs = await connection.getTokenLargestAccounts(new PublicKey(nftId));
         const largestAccountInfo = await connection.getParsedAccountInfo(bigActs.value[0].address);
@@ -250,37 +240,23 @@ router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) =>
         if(ownerActual != ownerShould)
             throw Error("Invalid transaction");
 
+        // Now we can append everything
         let out;
         for(let i = 0; i <DRACULA.length; i++) {
            const item =  DRACULA[i];
            out = await solstoryApi.server.writer.appendItemCreate(new PublicKey(nftId), item, {confirmation:{commitment:'finalized'}});
         }
 
-
-
-
-        // tx.meta?.innerInstructions?.length == 2
-        // const message = tx?.transaction.message;
-        // message?.instructions.forEach((ix, index) =>  {
-
-        //     const programId = message?.accountKeys[ix.programIdIndex]
-        //     ix.program;
-        // });
-
-
-
         transCache.set(txid, true);
+        // We send back the transaction signature of the _last_ append, since if someone wants to wait on confirmation
+        // that's the one that'll be last
         res.status(OK).json(out);
     }).catch(next);
 });
 
 app.use(cors())
-
 app.use(router);
 
-
-// Add api router
-// app.use('/api', apiRouter);
 
 // Error handling
 app.use((err: Error, _: Request, res: Response, __: NextFunction) => {
@@ -289,17 +265,6 @@ app.use((err: Error, _: Request, res: Response, __: NextFunction) => {
         error: err.message,
     });
 });
-
-
-/***********************************************************************************
- *                                  Front-end content
- **********************************************************************************/
-
-// Set static dir
-const staticDir = path.join(__dirname, 'public');
-app.use(express.static(staticDir));
-
-
 
 // Export here and start in a diff file (for testing).
 export default app;

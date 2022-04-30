@@ -74,11 +74,11 @@ export function NFTItem(props: {nft: any}) {
         console.log(localSignature);
         setSignature(localSignature);
         setDisplayState('sending');
-        try {
-          await connection.confirmTransaction(localSignature, 'finalized')
-        }catch(err) {
-          setDisplayState("error getting confirmation");
-        }
+        // try {
+        //   await connection.confirmTransaction(localSignature, 'finalized')
+        // }catch(err) {
+        //   setDisplayState("error getting confirmation");
+        // }
 
 
         axios.get(SERVER_URL+'/dracula/'+localSignature).then((resp)=>{
@@ -109,9 +109,9 @@ export function NFTItem(props: {nft: any}) {
         case 'confirmation':
             return (<Button onClick={requestDracula}>send dracula</Button>);
         case 'sending':
-            return (<Typography>sending</Typography>);
+            return (<Typography>sending transaction to solana</Typography>);
         case 'sent':
-            return (<Typography>sent</Typography>);
+            return (<Typography>server awaiting confirmation</Typography>);
         case 'success':
             return (<Typography>success!</Typography>);
         default:
