@@ -160,20 +160,7 @@ router.get('/init',  async (req: Request, res: Response, next:NextFunction):Prom
       solstoryApi.programId
     );
 
-    try {
-    await solstoryApi.rpc.initialize({
-        accounts:{
-          solstoryPda: solstoryPda,
-          authority: wallet.publicKey,
-          systemProgram: "11111111111111111111111111111111"
-        },
-        signers:[wallet.payer]
-    });
-    }catch(e){
-        console.log("already initted");
-    }
-
-    return solstoryApi.server.writer.createWriterMetadata({
+    return solstoryApi.writer.createWriterMetadata({
         writerKey: wallet.payer.publicKey,
         cdn: "",
         label: "Dracula!",
@@ -244,7 +231,7 @@ router.get('/dracula/:txid', (req: Request, res: Response, next:NextFunction) =>
         let out;
         for(let i = 0; i <DRACULA.length; i++) {
            const item =  DRACULA[i];
-           out = await solstoryApi.server.writer.appendItemCreate(new PublicKey(nftId), item, {confirmation:{commitment:'finalized'}});
+           out = await solstoryApi.writer.appendItemCreate(new PublicKey(nftId), item, {confirmation:{commitment:'finalized'}});
         }
 
         transCache.set(txid, true);

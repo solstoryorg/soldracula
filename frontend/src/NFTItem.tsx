@@ -74,11 +74,6 @@ export function NFTItem(props: {nft: any}) {
         console.log(localSignature);
         setSignature(localSignature);
         setDisplayState('sending');
-        // try {
-        //   await connection.confirmTransaction(localSignature, 'finalized')
-        // }catch(err) {
-        //   setDisplayState("error getting confirmation");
-        // }
 
 
         axios.get(SERVER_URL+'/dracula/'+localSignature).then((resp)=>{
